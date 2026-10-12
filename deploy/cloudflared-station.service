@@ -1,0 +1,25 @@
+# systemd unit that runs the Cloudflare tunnel for the station on the same LXC as `station`. Install:
+#   sudo cp deploy/cloudflared-station.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#   sudo systemctl enable --now cloudflared-station
+#
+# The token comes from TUNNEL_TOKEN in /opt/station/.env (cloudflared reads that variable itself, so it
+# never appears on the command line or in `ps`). Create it in Cloudflare Zero Trust -> Networks -> Tunnels:
+# make a tunnel, copy its token, and add a public hostname  shubhanx86.com -> http://localhost:8080
+[Unit]
+Description=Cloudflare tunnel for the Shubhan station
+After=network-online.target station.service
+Wants=network-online.target
+
+[Service]
+User=station
+EnvironmentFile=/opt/station/.env
+ExecStart=/usr/bin/cloudflared --no-autoupdate tunnel run
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

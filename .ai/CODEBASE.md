@@ -30,6 +30,7 @@ PUBLIC_URL: config.rs:51 -> redirect_uri (config.rs:62), Secure cookie flag if h
 ALLOWED_EMAILS: config.rs:39, comma list, lowercased -> is_allowed (config.rs:70)
 SESSION_SECRET: config.rs:34, >=32 chars -> SHA-512 -> cookie Key (config.rs:76)
 TEST_LOGIN_USER / TEST_LOGIN_PASSWORD: opt, TEST ONLY; both set => Google OAuth off, GOOGLE_* not required, POST /auth/test-login enabled (auth.rs test_login)
+TUNNEL_TOKEN: opt, Cloudflare tunnel token; read by cloudflared (deploy/cloudflared-station.service), ignored by the server
 BIND_ADDR: opt, default 0.0.0.0:8080
 STATIC_DIR: opt, default ../web/dist (relative to cwd = server/)
 HOMESERVER_DATA: opt, default data/homeserver.json
@@ -37,7 +38,7 @@ RUST_LOG: opt, tracing EnvFilter, default "info,tower_http=info"
 
 ## STRUCTURE
 .ai/            AI guide + review
-deploy/         deploy.sh, station.service (systemd)
+deploy/         deploy.sh, station.service + cloudflared-station.service (systemd)
 server/
   src/          main.rs (router, homeserver endpoints), auth.rs (OAuth+session), config.rs (env)
   data/         homeserver.json: private node/guest map, re-read per request

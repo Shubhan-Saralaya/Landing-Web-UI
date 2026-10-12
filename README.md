@@ -49,3 +49,16 @@ cp /opt/station/deploy/station.service /etc/systemd/system/ && systemctl daemon-
 
 Then `deploy/deploy.sh` on each update. In the Cloudflare tunnel, route `shubhanx86.com` → `http://<lxc-ip>:8080`
 (or `http://localhost:8080` if cloudflared runs in the same container).
+
+### Cloudflare tunnel (token in `.env`)
+
+1. Cloudflare Zero Trust → Networks → Tunnels → create a tunnel, copy its token, and add a public hostname
+   `shubhanx86.com` → `http://localhost:8080`.
+2. Put the token in `/opt/station/.env` as `TUNNEL_TOKEN=...` (the file is gitignored; `.env.example` has the name only).
+3. Install [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)
+   on the LXC, then:
+   ```bash
+   sudo cp deploy/cloudflared-station.service /etc/systemd/system/
+   sudo systemctl daemon-reload && sudo systemctl enable --now cloudflared-station
+   ```
+4. Locally (fish): `env (grep ^TUNNEL_TOKEN= .env) cloudflared tunnel run`.

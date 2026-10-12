@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Cloudflare tunnel service: `deploy/cloudflared-station.service` runs `cloudflared tunnel run` with `TUNNEL_TOKEN` from `.env`; documented in README, name added to `.env.example`.
 - Data-driven homeserver: `server/data/homeserver.json` now carries each service's `logo` (built-in id, or a custom `{path,color}` 24x24 SVG path) and optional `layout` limits. A new guest appears in both 3D and 2D with no code change. Nodes with more than 6 services split into up to 3 sub-rooms ("home2 · 1/2"); anything beyond 18 per node is not drawn. Rooms sit on a spine, alternating sides, so the ship grows along +x and the camera framing follows (`scene/homeLayout.ts`). The hub reserves 4 side-ship slots (`MAX_SIDE_SHIPS`); only Shipyard + Homeserver exist today.
 - `npm run check:layout` stress-tests splitting, caps and spacing up to 144 pods.
 - Shared-service logos on the hub now come from `data/shared.ts` (`logo` field, up to 4).
