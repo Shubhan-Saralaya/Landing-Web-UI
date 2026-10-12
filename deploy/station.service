@@ -1,0 +1,22 @@
+# systemd unit for LXC 112 (home2-web). Install:
+#   sudo cp deploy/station.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#   sudo systemctl enable --now station
+[Unit]
+Description=Shubhan station (axum server + static site)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=station
+WorkingDirectory=/opt/station/server
+EnvironmentFile=/opt/station/.env
+ExecStart=/opt/station/server/target/release/station-server
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,21 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# node / vite
+node_modules/
+web/dist/
+*.tsbuildinfo
+.vite/
+
+# rust
+server/target/
+
+# editor / os / local tooling
+.claude/settings.local.json
+.vscode/
+.idea/
+*.log
+.DS_Store
+Thumbs.db

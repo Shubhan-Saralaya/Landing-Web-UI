@@ -1,0 +1,28 @@
+{
+  "datacenter": "Chithara",
+  "nodes": [
+    {
+      "id": "home2",
+      "name": "home2",
+      "url": "https://home2.tail4d2523.ts.net:8006",
+      "guests": [
+        { "vmid": 102, "name": "Minecraft", "kind": "lxc", "status": "stopped", "description": "Game server" },
+        { "vmid": 104, "name": "Nextcloud", "kind": "lxc", "status": "stopped", "url": "https://nextcloud.shubhanx86.com", "description": "Files & sync" },
+        { "vmid": 105, "name": "Actual", "kind": "lxc", "status": "running", "url": "https://actual.shubhanx86.com", "description": "Budgeting" },
+        { "vmid": 106, "name": "Actual (Ash)", "kind": "lxc", "status": "running", "url": "https://ashvitabudget.shubhanx86.com", "description": "Budgeting" },
+        { "vmid": 112, "name": "home2-web", "kind": "lxc", "status": "running", "url": "https://shubhanx86.com", "description": "This station" },
+        { "vmid": 150, "name": "Arch", "kind": "vm", "status": "running", "description": "Arch Linux VM" },
+        { "vmid": 156, "name": "Home Assistant 2", "kind": "vm", "status": "stopped", "description": "Home automation" }
+      ]
+    },
+    {
+      "id": "home4",
+      "name": "home4",
+      "url": "https://home4.tail4d2523.ts.net:8006",
+      "guests": [
+        { "vmid": 153, "name": "Vaultwarden", "kind": "lxc", "status": "running", "url": "https://vault.shubhanx86.com", "description": "Password vault" },
+        { "vmid": 103, "name": "Home Assistant", "kind": "vm", "status": "running", "url": "https://homeassistant.shubhanx86.com", "description": "Home automation" }
+      ]
+    }
+  ]
+}
