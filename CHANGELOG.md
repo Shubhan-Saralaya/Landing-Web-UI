@@ -24,6 +24,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Homeserver rooms and pods ~1.4-1.7x bigger (wider spacing, larger shield, camera framing 7.2 -> 9.2, overview 21 -> 23); roof logos ~2.5x bigger.
 
 ### Fixed
+- `deploy/deploy.sh` raises Node's heap (`NODE_HEAP_MB`, default 1536) so `vite build` no longer runs out of memory on the small LXC.
 - Camera hint no longer overlaps the sector nav; test-login form fills the airlock banner and is styled.
 
 ## 2026-10-11
