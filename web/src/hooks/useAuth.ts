@@ -8,6 +8,8 @@ export interface AuthState {
   email?: string;
   data?: HomeserverData;
   notice?: AuthNotice;
+  /** 'password' while the server's TEST login replaces Google. */
+  mode?: 'google' | 'password';
 }
 
 const NOTICES: AuthNotice[] = ['ok', 'denied', 'error', 'cancelled'];
@@ -38,6 +40,7 @@ export function useAuth() {
     };
     try {
       const me = await getJson('/api/me');
+      setState((s) => ({ ...s, mode: me?.mode }));
       if (!me?.authenticated) return lock();
 
       const data = (await getJson('/api/homeserver')) as HomeserverData | null;
@@ -57,6 +60,21 @@ export function useAuth() {
     window.location.href = '/auth/login';
   }, []);
 
+  /** TEST ONLY: resolves true on success. */
+  const loginWithPassword = useCallback(
+    async (username: string, password: string) => {
+      const res = await fetch('/auth/test-login', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      if (res.ok) await refresh();
+      return res.ok;
+    },
+    [refresh],
+  );
+
   const logout = useCallback(async () => {
     try {
       await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' });
@@ -67,7 +85,7 @@ export function useAuth() {
 
   const dismissNotice = useCallback(() => setState((s) => ({ ...s, notice: undefined })), []);
 
-  return { ...state, login, logout, dismissNotice };
+  return { ...state, login, loginWithPassword, logout, dismissNotice };
 }
 
 export type Auth = ReturnType<typeof useAuth>;

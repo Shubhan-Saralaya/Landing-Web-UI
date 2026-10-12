@@ -1,3 +1,4 @@
+import { useState, type FormEvent } from 'react';
 import type { Auth } from '../hooks/useAuth';
 import type { Guest } from '../types';
 import { LockIcon } from './HUD';
@@ -24,9 +25,13 @@ export function HomeserverPanel({ auth }: { auth: Auth }) {
             </p>
           </div>
           {auth.notice === 'denied' && <p className="alert">That account isn't on the clearance list.</p>}
-          <button className="btn btn-danger" onClick={auth.login}>
-            Request clearance with Google
-          </button>
+          {auth.mode === 'password' ? (
+            <TestLoginForm onSubmit={auth.loginWithPassword} />
+          ) : (
+            <button className="btn btn-danger" onClick={auth.login}>
+              Request clearance with Google
+            </button>
+          )}
         </div>
       ) : (
         <div className="clearance">
@@ -75,6 +80,35 @@ export function HomeserverPanel({ auth }: { auth: Auth }) {
         </>
       )}
     </>
+  );
+}
+
+/** TEST ONLY: shown while the server runs with TEST_LOGIN_USER/PASSWORD instead of Google. */
+function TestLoginForm({ onSubmit }: { onSubmit: (u: string, p: string) => Promise<boolean> }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [failed, setFailed] = useState(false);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setFailed(!(await onSubmit(username, password)));
+  };
+
+  return (
+    <form onSubmit={submit} className="test-login">
+      <input placeholder="Username" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} />
+      <input
+        type="password"
+        placeholder="Password"
+        autoComplete="current-password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      {failed && <p className="alert">Wrong username or password.</p>}
+      <button className="btn btn-danger" type="submit">
+        Request clearance (test login)
+      </button>
+    </form>
   );
 }
 

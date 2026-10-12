@@ -26,6 +26,28 @@ export const mats = {
   ghost: new THREE.MeshBasicMaterial({ color: '#ffd28a', wireframe: true, transparent: true, opacity: 0.22 }),
 };
 
+const OFF = new THREE.Color('#1b212c');
+
+/**
+ * The homeserver ship's own lights. HomeShip eases `level` 0 -> 1 when it is cleared ("powers on") and back
+ * when it locks; the corridor leading to it uses the same materials so the whole ship goes dark together.
+ */
+export const homeLights = {
+  cyan: new THREE.MeshBasicMaterial({ color: colors.cyan, toneMapped: false }),
+  proxmox: new THREE.MeshBasicMaterial({ color: colors.proxmox, toneMapped: false }),
+  green: new THREE.MeshBasicMaterial({ color: colors.green, toneMapped: false }),
+  grey: new THREE.MeshBasicMaterial({ color: colors.grey, toneMapped: false }),
+};
+const homeBase = Object.fromEntries(
+  Object.entries(homeLights).map(([k, m]) => [k, m.color.clone()]),
+) as Record<keyof typeof homeLights, THREE.Color>;
+
+export function setHomePower(level: number) {
+  (Object.keys(homeLights) as (keyof typeof homeLights)[]).forEach((k) =>
+    homeLights[k].color.lerpColors(OFF, homeBase[k], level),
+  );
+}
+
 const glowCache = new Map<string, THREE.MeshBasicMaterial>();
 
 /** Unlit, tone-mapping-free material for windows and lights, cached per colour. */

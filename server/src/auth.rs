@@ -49,7 +49,10 @@ fn removal(name: &'static str) -> Cookie<'static> {
     Cookie::build(name).path("/").build()
 }
 
-pub async fn login(State(state): State<AppState>, jar: PrivateCookieJar) -> impl IntoResponse {
+pub async fn login(State(state): State<AppState>, jar: PrivateCookieJar) -> Response {
+    if state.config.test_login.is_some() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
     let csrf = hex::encode(rand::random::<[u8; 32]>());
 
     let mut url = reqwest::Url::parse(GOOGLE_AUTH_URL).expect("static URL");
@@ -62,7 +65,40 @@ pub async fn login(State(state): State<AppState>, jar: PrivateCookieJar) -> impl
         .append_pair("prompt", "select_account");
 
     let jar = jar.add(cookie(&state, STATE_COOKIE, csrf, Duration::minutes(10)));
-    (jar, Redirect::to(url.as_str()))
+    (jar, Redirect::to(url.as_str())).into_response()
+}
+
+#[derive(Deserialize)]
+pub struct TestLogin {
+    username: String,
+    password: String,
+}
+
+/// TEST ONLY: username/password login, available only while TEST_LOGIN_USER/PASSWORD are set.
+pub async fn test_login(
+    State(state): State<AppState>,
+    jar: PrivateCookieJar,
+    Json(body): Json<TestLogin>,
+) -> Response {
+    let Some((user, pass)) = &state.config.test_login else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    // Constant-time compare; both checks always run.
+    let ok = ct_eq(body.username.as_bytes(), user.as_bytes()) & ct_eq(body.password.as_bytes(), pass.as_bytes());
+    if !ok {
+        tracing::warn!("test login denied");
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
+    tracing::warn!(%user, "homeserver unlocked via TEST login");
+    let exp = OffsetDateTime::now_utc() + Duration::days(SESSION_DAYS);
+    let session = Session { email: user.clone(), exp: exp.unix_timestamp() };
+    let value = serde_json::to_string(&session).expect("serializable");
+    (jar.add(cookie(&state, SESSION_COOKIE, value, Duration::days(SESSION_DAYS))), StatusCode::NO_CONTENT)
+        .into_response()
+}
+
+fn ct_eq(a: &[u8], b: &[u8]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
 #[derive(Deserialize)]
@@ -76,6 +112,9 @@ pub async fn callback(
     jar: PrivateCookieJar,
     Query(params): Query<CallbackParams>,
 ) -> Response {
+    if state.config.test_login.is_some() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
     let expected = jar.get(STATE_COOKIE).map(|c| c.value().to_owned());
     let jar = jar.remove(removal(STATE_COOKIE));
 
@@ -161,9 +200,12 @@ pub async fn logout(jar: PrivateCookieJar) -> (PrivateCookieJar, StatusCode) {
 pub struct Me {
     authenticated: bool,
     email: Option<String>,
+    /// "password" while the TEST login replaces Google, else "google".
+    mode: &'static str,
 }
 
-pub async fn me(jar: PrivateCookieJar) -> Json<Me> {
+pub async fn me(State(state): State<AppState>, jar: PrivateCookieJar) -> Json<Me> {
     let email = session_email(&jar);
-    Json(Me { authenticated: email.is_some(), email })
+    let mode = if state.config.test_login.is_some() { "password" } else { "google" };
+    Json(Me { authenticated: email.is_some(), email, mode })
 }

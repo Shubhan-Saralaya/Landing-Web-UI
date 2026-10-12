@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { AdaptiveDpr, Stars } from '@react-three/drei';
 import type { StationProps } from '../types';
 import { projects } from '../data/projects';
-import { colors } from './materials';
+import { sharedServices } from '../data/shared';
+import { colors, homeLights } from './materials';
 import { JUNCTION_X, SHIPS, faceDist } from './layout';
 import { Selectable } from './Selectable';
 import { MainShip } from './MainShip';
@@ -11,16 +13,33 @@ import { HomeShip } from './HomeShip';
 import { Corridor, HexArray, Module, Strut } from './parts';
 import { Asteroids, Nebula, Planet, Shuttle } from './Environment';
 import { CameraRig } from './CameraRig';
+import { dragState, homeBounds } from './cameraControl';
+import { layoutHome } from './homeLayout';
+import { resolveLogoId } from './logos';
 
 const HUB_FACE = faceDist(2.3);
 const JUNCTION_R = 0.85;
 const SIDE_FACE = faceDist(1.5);
 
+function junctionLogo(service?: { name: string; logo?: Parameters<typeof resolveLogoId>[1] }) {
+  return service ? { logo: resolveLogoId(service.name, service.logo), label: service.name } : {};
+}
+
 /** Junction module part-way along an X arm, with solar arrays fore and aft. */
-function Junction({ x }: { x: number }) {
+function Junction({
+  x,
+  logo,
+  label,
+  showLabel,
+}: {
+  x: number;
+  logo?: string;
+  label?: string;
+  showLabel?: boolean;
+}) {
   return (
     <group position={[x, 0, 0]}>
-      <Module radius={JUNCTION_R} height={0.65} accent={colors.cyan} />
+      <Module radius={JUNCTION_R} height={0.65} accent={colors.cyan} logo={logo ? { id: logo, fill: 0.85, label, showLabel } : undefined} />
       {[1, -1].map((s) => (
         <group key={s}>
           <Strut from={[0, 0, s * 0.8]} to={[0, 0, s * 1.5]} />
@@ -31,11 +50,14 @@ function Junction({ x }: { x: number }) {
   );
 }
 
-function Scene({ focus, onSelect, locked, homeserver }: StationProps) {
+function Scene({ focus, onSelect, locked, homeserver, showServices = true }: StationProps) {
   const { size } = useThree();
   // On portrait screens, turn the station so its long axis runs into the screen instead of across it.
   const yaw = size.width / size.height < 0.8 ? -Math.PI / 2 : 0;
   const overview = focus === 'overview';
+  const layout = useMemo(() => layoutHome(homeserver), [homeserver]);
+  homeBounds.reachX = layout.reachX;
+  homeBounds.halfZ = layout.halfZ;
 
   return (
     <>
@@ -56,7 +78,7 @@ function Scene({ focus, onSelect, locked, homeserver }: StationProps) {
           labelHeight={3.4}
           onSelect={() => onSelect('main')}
         >
-          <MainShip />
+          <MainShip showServices={showServices} services={sharedServices} />
         </Selectable>
 
         <Selectable
@@ -74,24 +96,24 @@ function Scene({ focus, onSelect, locked, homeserver }: StationProps) {
         <Selectable
           position={SHIPS.homeserver.position}
           label="Homeserver"
-          sub={locked ? 'Restricted sector' : 'Clearance granted'}
+          sub={locked ? 'Powered down' : 'Clearance granted'}
           tone={locked ? 'red' : 'cyan'}
           showLabel={overview}
           labelHeight={3.2}
           onSelect={() => onSelect('homeserver')}
         >
-          <HomeShip locked={locked} data={homeserver} focused={focus === 'homeserver'} />
+          <HomeShip locked={locked} data={homeserver} layout={layout} focused={focus === 'homeserver'} showServices={showServices} />
         </Selectable>
 
         {[-1, 1].map((s) => (
           <group key={s}>
             <Corridor from={[s * HUB_FACE, 0, 0]} to={[s * (JUNCTION_X - faceDist(JUNCTION_R)), 0, 0]} />
-            <Junction x={s * JUNCTION_X} />
+            <Junction x={s * JUNCTION_X} {...junctionLogo(sharedServices[s > 0 ? 2 : 3])} showLabel={showServices} />
             <Corridor
               from={[s * (JUNCTION_X + faceDist(JUNCTION_R)), 0, 0]}
               to={[s * (Math.abs(SHIPS.homeserver.position[0]) - SIDE_FACE), 0, 0]}
               accent={s < 0 ? colors.amber : colors.cyan}
-              sealed={s > 0 && locked}
+              lights={s > 0 ? homeLights.cyan : undefined}
             />
           </group>
         ))}
@@ -112,7 +134,7 @@ export default function Station3D(props: StationProps) {
       className="scene"
       camera={{ position: [0, 60, 90], fov: 45, near: 0.1, far: 700 }}
       dpr={[1, 2]}
-      onPointerMissed={() => props.onSelect('overview')}
+      onPointerMissed={() => !dragState.moved && props.onSelect('overview')}
     >
       <Scene {...props} />
     </Canvas>

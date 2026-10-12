@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Html, useCursor } from '@react-three/drei';
 import * as THREE from 'three';
 import type { Vec3 } from './layout';
+import { dragState } from './cameraControl';
 
 interface Props {
   position: Vec3;
@@ -38,7 +39,7 @@ export function Selectable({ position, label, sub, tone = 'cyan', showLabel, lab
         onPointerOut={() => setHovered(false)}
         onClick={(e) => {
           e.stopPropagation();
-          onSelect();
+          if (!dragState.moved) onSelect();
         }}
       >
         {children}

@@ -42,6 +42,9 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let config = config::Config::from_env()?;
+    if config.test_login.is_some() {
+        tracing::warn!("TEST LOGIN ENABLED: Google OAuth is disabled, do not use in production");
+    }
     let state = AppState {
         key: config.cookie_key(),
         http: reqwest::Client::builder().user_agent("station-server").build()?,
@@ -55,6 +58,7 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/auth/login", get(auth::login))
         .route("/auth/callback", get(auth::callback))
+        .route("/auth/test-login", post(auth::test_login))
         .route("/auth/logout", post(auth::logout))
         .route("/api/me", get(auth::me))
         .route("/api/homeserver", get(homeserver))

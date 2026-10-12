@@ -8,10 +8,10 @@ export type Vec3 = [number, number, number];
 export const SHIPS = {
   main: { position: [0, 0, 0] as Vec3, focus: [0, 0, 0] as Vec3, radius: 7 },
   projects: { position: [-15, 0, 0] as Vec3, focus: [-16.4, 0, 0] as Vec3, radius: 6 },
-  homeserver: { position: [15, 0, 0] as Vec3, focus: [17.2, 0, 0] as Vec3, radius: 7.2 },
+  homeserver: { position: [15, 0, 0] as Vec3, focus: [17.8, 0, 0] as Vec3, radius: 9.2 },
 };
 
-export const OVERVIEW = { focus: [0.5, 0, 0] as Vec3, radius: 21 };
+export const OVERVIEW = { focus: [0.5, 0, 0] as Vec3, radius: 23 };
 
 /** Junction modules part-way along each X arm. */
 export const JUNCTION_X = 8.2;

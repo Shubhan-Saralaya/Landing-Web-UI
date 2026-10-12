@@ -29,6 +29,7 @@ GOOGLE_CLIENT_SECRET: config.rs:50 -> auth.rs:130
 PUBLIC_URL: config.rs:51 -> redirect_uri (config.rs:62), Secure cookie flag if https (config.rs:66)
 ALLOWED_EMAILS: config.rs:39, comma list, lowercased -> is_allowed (config.rs:70)
 SESSION_SECRET: config.rs:34, >=32 chars -> SHA-512 -> cookie Key (config.rs:76)
+TEST_LOGIN_USER / TEST_LOGIN_PASSWORD: opt, TEST ONLY; both set => Google OAuth off, GOOGLE_* not required, POST /auth/test-login enabled (auth.rs test_login)
 BIND_ADDR: opt, default 0.0.0.0:8080
 STATIC_DIR: opt, default ../web/dist (relative to cwd = server/)
 HOMESERVER_DATA: opt, default data/homeserver.json
@@ -51,10 +52,11 @@ web/
     styles.css  all CSS; --panel-w/--sheet-h coupled to CameraRig
 
 ## ROUTES
+POST /auth/test-login        -> auth.rs test_login     auth:n  {username,password} JSON, 204 + session | 401; 404 unless TEST_LOGIN_* set
 GET  /auth/login             -> auth.rs:52 login       auth:n  sets oauth_state cookie, 302 Google
 GET  /auth/callback          -> auth.rs:74 callback    auth:n  (state cookie CSRF) sets session, 302 /?auth=ok|denied|error|cancelled#homeserver
 POST /auth/logout            -> auth.rs:156 logout     auth:n  removes session, 204
-GET  /api/me                 -> auth.rs:166 me         auth:n  {authenticated,email}
+GET  /api/me                 -> auth.rs:166 me         auth:n  {authenticated,email,mode:google|password}
 GET  /api/homeserver         -> main.rs:77 homeserver  auth:y  full map, 401 w/o session, no-store
 GET  /api/homeserver/public  -> main.rs:88 homeserver_public auth:n  map w/ all `url` keys stripped
 *    fallback                -> main.rs:53 ServeDir(STATIC_DIR) + index.html 200 fallback (SPA)
@@ -81,14 +83,16 @@ useRenderMode() hooks/useRenderMode.ts:29  localStorage station.renderMode ?? su
 supports3D() hooks/useRenderMode.ts:7  reduced-motion, webgl, cores>2, mem>2
 Station3D (default) scene/Station3D.tsx:109  Canvas; onPointerMissed -> overview
 Scene scene/Station3D.tsx:34  yaw=-pi/2 if aspect<0.8; places ships, corridors, env
-CameraRig({focus,yaw}) scene/CameraRig.tsx:20  per-frame lerp, offsets for panel/sheet
+CameraRig({focus,yaw}) scene/CameraRig.tsx  per-frame lerp, offsets for panel/sheet; manual orbit(az/polar)+zoom via drag/wheel/pinch, dblclick|focus change resets; state in scene/cameraControl.ts (getGoal/reset/setZoom/dragState; click handlers must check dragState.moved); ui/CameraControls.tsx = reset+slider+hint
 Selectable scene/Selectable.tsx:19  hover scale, click select, overview label
-HomeShip({locked,data,focused}) scene/HomeShip.tsx:35  core, node rooms, guest pods, shield
+HomeShip({locked,data,focused}) scene/HomeShip.tsx:35  core, node rooms, guest pods; locked = powered down (homeLights eased by setHomePower)
 Pod scene/HomeShip.tsx:140  window.open(url) if focused && url
 MainShip scene/MainShip.tsx:14; ProjectShip({count}) scene/ProjectShip.tsx:13
 Module/Corridor/Strut/HexArray scene/parts.tsx:24/81/155/184  procedural parts
 Asteroids/Nebula/Planet/Shuttle scene/Environment.tsx:18/77/103/121
 mats, glowMat(color) scene/materials.ts:13/32  shared/cached materials
+LOGOS, logoIdFor(name) scene/logos.ts  roof logo glyphs (simple-icons paths), matched by service name substring; add an entry for new services
+RoofLogo scene/RoofLogo.tsx  spherical cap hugging a dome with planar UVs; used via Module `logo` prop
 SHIPS, OVERVIEW, JUNCTION_X, faceDist, fanAngles, polar scene/layout.ts:8-32
 Station2D(StationProps) fallback/Station2D.tsx:22  SVG mirror of 3D layout
 Panel ui/Panel.tsx:11  side panel / bottom sheet
@@ -125,8 +129,17 @@ navigation: click ship|HUD|hash -> setFocus -> pushState #focus -> CameraRig fli
 open guest: focused HomeShip pod click | HomeserverPanel link -> url present only if server sent full map
 content edit: web/src/data/*.ts -> rebuild; server/data/homeserver.json -> live next request
 
+## ADD A SERVICE
+edit server/data/homeserver.json: add a guest under its node {vmid,name,kind,status,url?,description?,logo?}; live on next request.
+logo: built-in id (scene/logos.ts LOGOS) | {path:"<24x24 svg path d>",color?} | omitted -> matched from name | no match -> no logo.
+layout: scene/homeLayout.ts. >6 guests/node -> split into <=3 rooms (names "node · i/n"); >18 hidden. Override via json "layout":{maxPerRoom,maxSubRooms}.
+rooms alternate +z/-z along a spine from the core, columns 7.6 apart; reach grows with rooms, homeBounds (cameraControl.ts) feeds CameraRig.
+2D view uses the same layout x28 with a viewBox that grows to fit (Station2D.tsx).
+verify: cd web && npm run check:layout
+shared (hub) services: web/src/data/shared.ts, max 4 logos (arms fore/aft, junctions +x/-x).
+
 ## GOTCHAS
-security boundary is server-side only: lock icons/shield are cosmetic; url presence = access (main.rs:88-96)
+security boundary is server-side only: lock icons/power-down are cosmetic; url presence = access (main.rs:88-96)
 strip_urls is denylist on key "url"; any new link field (href, console...) would leak publicly (main.rs:110)
 session_email doesn't recheck ALLOWED_EMAILS; removing an email doesn't revoke live sessions; rotate SESSION_SECRET (auth.rs:32)
 CameraRig PANEL_MAX_PX=460 / SHEET_FRACTION=0.58 / MOBILE_BREAKPOINT=768 must match styles.css:16-17 and @media 768/767

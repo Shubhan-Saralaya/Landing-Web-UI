@@ -12,6 +12,16 @@ export interface Guest {
   status: 'running' | 'stopped';
   url?: string;
   description?: string;
+  /**
+   * Roof logo: the id of a built-in logo (see scene/logos.ts) or a custom `{ path, color? }` with
+   * `path` an SVG path on a 24x24 grid. Omitted: matched from `name`, else no logo.
+   */
+  logo?: string | CustomLogo;
+}
+
+export interface CustomLogo {
+  path: string;
+  color?: string;
 }
 
 export interface PveNode {
@@ -25,6 +35,8 @@ export interface PveNode {
 export interface HomeserverData {
   datacenter: string;
   nodes: PveNode[];
+  /** Optional overrides for the room-splitting limits (see scene/homeLayout.ts). */
+  layout?: { maxPerRoom?: number; maxSubRooms?: number };
 }
 
 /** Props shared by the 3D scene and the 2D fallback. */
@@ -34,4 +46,6 @@ export interface StationProps {
   locked: boolean;
   /** Public map (no urls) while locked, full map once cleared; undefined if the server is unreachable. */
   homeserver?: HomeserverData;
+  /** Name every service above its logo, even when its ship isn't selected. */
+  showServices?: boolean;
 }

@@ -5,6 +5,8 @@ import { useFrame, type GroupProps } from '@react-three/fiber';
 import * as THREE from 'three';
 import { colors, glowMat, mats } from './materials';
 import type { Vec3 } from './layout';
+import { Html } from '@react-three/drei';
+import { RoofLogo } from './RoofLogo';
 
 const FACES = 8;
 const FACE_ANGLES = Array.from({ length: FACES }, (_, k) => (k * Math.PI * 2) / FACES);
@@ -17,6 +19,10 @@ interface ModuleProps extends GroupProps {
   dome?: 'solid' | 'wire' | 'none';
   /** Override the dome material (e.g. a glowing reactor). */
   domeMaterial?: THREE.Material;
+  /** Override the window-band material (e.g. lights that can be powered down). */
+  windowMaterial?: THREE.Material;
+  /** Logo id (see logos.ts) painted on top of the dome; `dim` greys it out for offline services. */
+  logo?: { id: string; dim?: boolean; fill?: number; /** Name floated above the logo while `showLabel` is set. */ label?: string; showLabel?: boolean };
   children?: ReactNode;
 }
 
@@ -27,6 +33,8 @@ export function Module({
   accent = colors.cyan,
   dome = 'solid',
   domeMaterial,
+  windowMaterial,
+  logo,
   children,
   ...props
 }: ModuleProps) {
@@ -34,7 +42,7 @@ export function Module({
   const small = radius < 0.5;
   const domeR = radius * 0.82;
   const domeH = 0.6;
-  const windowMat = glowMat(accent);
+  const windowMat = windowMaterial ?? glowMat(accent);
 
   return (
     <group {...props}>
@@ -62,12 +70,18 @@ export function Module({
           <mesh material={domeMaterial ?? (dome === 'wire' ? mats.scaffold : mats.hullDark)}>
             <sphereGeometry args={[domeR, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
           </mesh>
+          {logo && <RoofLogo id={logo.id} domeRadius={domeR} dim={logo.dim} fill={logo.fill} />}
           {dome === 'solid' && !domeMaterial && (
             <mesh position={[0, domeR * 0.55, 0]} rotation={[Math.PI / 2, 0, 0]} material={windowMat}>
               <torusGeometry args={[domeR * 0.82, small ? 0.02 : 0.035, 6, 32]} />
             </mesh>
           )}
         </group>
+      )}
+      {logo?.label && logo.showLabel && dome !== 'none' && (
+        <Html position={[0, height / 2 + domeR * domeH + 0.5, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
+          <span className="scene-tag">{logo.label}</span>
+        </Html>
       )}
       {children}
     </group>
@@ -78,7 +92,20 @@ const WINDOW_GAP = 0.55;
 const PULSES = 2;
 
 /** Flat corridor between two points on the XZ plane, lit windows on both sides; sealed shows a red airlock. */
-export function Corridor({ from, to, accent = colors.cyan, sealed = false }: { from: Vec3; to: Vec3; accent?: string; sealed?: boolean }) {
+export function Corridor({
+  from,
+  to,
+  accent = colors.cyan,
+  sealed = false,
+  lights,
+}: {
+  from: Vec3;
+  to: Vec3;
+  accent?: string;
+  sealed?: boolean;
+  /** Overrides the window and pulse material, so a ship can power its corridors down. */
+  lights?: THREE.Material;
+}) {
   const [fx, fy, fz] = from;
   const [tx, ty, tz] = to;
   const { mid, length, yaw } = useMemo(() => {
@@ -129,7 +156,7 @@ export function Corridor({ from, to, accent = colors.cyan, sealed = false }: { f
           <boxGeometry args={[0.14, 0.48, 0.6]} />
         </mesh>
       ))}
-      <instancedMesh key={perSide} ref={windows} args={[undefined, undefined, perSide * 2]} material={sealed ? mats.sealed : glowMat(accent)}>
+      <instancedMesh key={perSide} ref={windows} args={[undefined, undefined, perSide * 2]} material={lights ?? (sealed ? mats.sealed : glowMat(accent))}>
         <boxGeometry args={[0.28, 0.13, 0.02]} />
       </instancedMesh>
       {sealed && (
@@ -143,7 +170,7 @@ export function Corridor({ from, to, accent = colors.cyan, sealed = false }: { f
         </group>
       )}
       {Array.from({ length: PULSES }, (_, i) => (
-        <mesh key={i} ref={(m) => m && (pulses.current[i] = m)} position={[0, 0.26, 0]} material={glowMat(sealed ? colors.red : accent)}>
+        <mesh key={i} ref={(m) => m && (pulses.current[i] = m)} position={[0, 0.26, 0]} material={lights ?? glowMat(sealed ? colors.red : accent)}>
           <sphereGeometry args={[0.06, 8, 8]} />
         </mesh>
       ))}

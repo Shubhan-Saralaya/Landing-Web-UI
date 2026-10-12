@@ -11,7 +11,7 @@
   --red: #ff4d4d;
   --green: #3dff9a;
   --proxmox: #ff7a1a;
-  --font: 'Space Grotesk', system-ui, sans-serif;
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --panel-w: min(460px, 42vw); /* keep in sync with PANEL_MAX_PX in CameraRig.tsx */
   --sheet-h: 58vh; /* keep in sync with SHEET_FRACTION in CameraRig.tsx */
@@ -227,6 +227,11 @@ a {
 }
 .hud-chip:hover {
   border-color: var(--cyan);
+}
+.hud-chip.is-on {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(79, 227, 255, 0.1);
 }
 
 .hud-nav {
@@ -867,6 +872,27 @@ a {
 .core2d {
   fill: var(--proxmox);
   filter: drop-shadow(0 0 12px var(--proxmox));
+  transition: fill 0.8s, filter 0.8s;
+}
+.core2d.is-off {
+  fill: #3a2412;
+  filter: none;
+}
+.corridor-windows2d.is-off {
+  stroke: #1b212c;
+}
+.service2d {
+  fill: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: #04030c;
+  stroke-width: 3px;
+  pointer-events: none;
+}
+.logo2d {
+  pointer-events: none;
 }
 .pod2d {
   stroke: #2f3540;
@@ -915,6 +941,100 @@ a {
   text-anchor: middle;
 }
 
+/* 3D crash banner (shown over the 2D fallback) */
+.scene-error {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100% - 32px);
+  padding: 8px 12px;
+  border: 1px solid var(--red);
+  border-radius: 10px;
+  background: var(--glass-strong);
+  font-size: 0.75rem;
+  z-index: 40;
+}
+
+/* TEST-only login form */
+.test-login {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  text-align: left;
+}
+.test-login input {
+  padding: 9px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font: inherit;
+}
+.test-login input:focus-visible {
+  outline: 1px solid var(--cyan);
+  border-color: var(--cyan);
+}
+.test-login .btn {
+  margin-top: 2px;
+}
+
+/* ---------- camera controls ---------- */
+.cam-controls {
+  position: absolute;
+  left: 20px;
+  bottom: 84px; /* above the sector nav */
+  display: grid;
+  gap: 8px;
+  z-index: 20;
+  transition: opacity 0.3s;
+}
+.cam-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--cyan);
+  transition: opacity 0.6s;
+}
+.cam-hint.is-quiet {
+  opacity: 0.45;
+}
+.cam-hint-touch {
+  display: none;
+}
+@media (pointer: coarse) {
+  .cam-hint-touch {
+    display: inline;
+  }
+  .cam-hint-mouse {
+    display: none;
+  }
+}
+.cam-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cam-zoom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  font-size: 0.75rem;
+}
+.cam-zoom input {
+  width: 110px;
+  accent-color: var(--cyan);
+}
+
 /* ---------- mobile ---------- */
 @media (max-width: 767px) {
   .hud-top {
@@ -947,7 +1067,12 @@ a {
     flex: 1;
     padding: 8px 10px;
   }
-  .app:has(.panel.is-open) .hud-nav {
+  .cam-controls {
+    left: 16px;
+    bottom: 88px; /* above the sector nav */
+  }
+  .app:has(.panel.is-open) .hud-nav,
+  .app:has(.panel.is-open) .cam-controls {
     opacity: 0;
     pointer-events: none;
   }

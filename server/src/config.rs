@@ -7,6 +7,8 @@ use sha2::{Digest, Sha512};
 pub struct Config {
     pub google_client_id: String,
     pub google_client_secret: String,
+    /// TEST ONLY: when set, Google OAuth is disabled and this user/password pair logs in instead.
+    pub test_login: Option<(String, String)>,
     pub public_url: String,
     pub allowed_emails: Vec<String>,
     session_secret: String,
@@ -45,9 +47,17 @@ impl Config {
             bail!("ALLOWED_EMAILS must list at least one address");
         }
 
+        let test_login = match (env::var("TEST_LOGIN_USER"), env::var("TEST_LOGIN_PASSWORD")) {
+            (Ok(u), Ok(p)) if !u.trim().is_empty() && !p.is_empty() => Some((u.trim().to_string(), p)),
+            _ => None,
+        };
+        // Google credentials are only needed when the test login is off.
+        let google = |name: &str| if test_login.is_some() { Ok(optional(name, "")) } else { required(name) };
+
         Ok(Self {
-            google_client_id: required("GOOGLE_CLIENT_ID")?,
-            google_client_secret: required("GOOGLE_CLIENT_SECRET")?,
+            google_client_id: google("GOOGLE_CLIENT_ID")?,
+            google_client_secret: google("GOOGLE_CLIENT_SECRET")?,
+            test_login: test_login.clone(),
             public_url: required("PUBLIC_URL")?.trim_end_matches('/').to_string(),
             allowed_emails,
             session_secret,
